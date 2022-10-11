@@ -1,0 +1,83 @@
+---
+title: "p8105_hw3_sk5152"
+author: "Shuting Kang"
+date: "2022-10-11"
+output: github_document
+---
+
+
+## Problem 1
+
+```{r}
+library(p8105.datasets)
+library(tidyverse)
+library(ggridges)
+data("instacart")
+instacart
+```
+
+```{r}
+aisles=
+  instacart%>%
+    group_by(aisle)%>%
+    summarize(n_obs=n())%>%
+    arrange(desc(n_obs))
+aisles
+```
+Based on "The Instacart Online Grocery Shopping Dataset 2017", there were totally `r nrow(aisles)` aisle, and the most ordered aisle included fresh vegetables, fresh fruits, packaged vegatables fruits, and yogurt. 
+
+```{r}
+aisles_plot=
+  instacart%>%
+    group_by(aisle)%>%
+    summarize(n_obs=n())%>%
+    filter(n_obs>10000)%>%
+    ggplot(aes(x=aisle,y=n_obs,color=aisle))+
+    geom_point() +
+    theme_minimal()+
+    theme(axis.text.x=element_text(angle = 90,vjust=0.5,hjust=1,size=3))+
+    labs(title="#items ordered vs aisles",
+         x="aisles",
+         y="number of items ordered",
+         caption="aisles with more than 10000 items ordered")
+  
+aisles_plot
+```
+Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table
+```{r}
+b_plot=
+    instacart%>%
+    group_by(aisle,product_name)%>%
+    summarize(n_obs=n())%>%
+    filter(aisle==c("baking ingredients"),
+           min_rank(n_obs)>520)
+```
+
+```{r}
+d_plot=
+  instacart%>%
+    group_by(aisle,product_name)%>%
+    summarize(n_obs=n())%>%
+    filter(aisle==c("dog food care"),
+           min_rank(n_obs)>352)
+```
+
+```{r}
+p_plot=
+  instacart%>%
+    group_by(aisle,product_name)%>%
+    summarize(n_obs=n())%>%
+    filter(aisle==c("packaged vegetables fruits"),
+           min_rank(n_obs)>563)
+```
+
+```{r}
+bdp_plot=rbind(b_plot,d_plot,p_plot)
+
+```
+
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+```{r}
+
+```
+
