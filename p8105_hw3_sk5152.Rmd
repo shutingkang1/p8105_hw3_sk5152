@@ -44,14 +44,7 @@ aisles_plot=
 aisles_plot
 ```
 Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table
-```{r}
-b_plot=
-    instacart%>%
-    group_by(aisle,product_name)%>%
-    summarize(n_obs=n())%>%
-    filter(aisle==c("baking ingredients"),
-           min_rank(n_obs)>520)
-```
+
 
 ```{r}
 d_plot=
@@ -59,25 +52,201 @@ d_plot=
     group_by(aisle,product_name)%>%
     summarize(n_obs=n())%>%
     filter(aisle==c("dog food care"),
-           min_rank(n_obs)>352)
-```
-
-```{r}
+           min_rank(desc(n_obs))<=3)%>%
+    arrange(desc(n_obs))
+b_plot=
+  instacart%>%
+    group_by(aisle,product_name)%>%
+    summarize(n_obs=n())%>%
+    filter(aisle==c("backing ingredients"),
+           min_rank(desc(n_obs))<=3)%>%
+    arrange(desc(n_obs))
 p_plot=
   instacart%>%
     group_by(aisle,product_name)%>%
     summarize(n_obs=n())%>%
     filter(aisle==c("packaged vegetables fruits"),
-           min_rank(n_obs)>563)
+           min_rank(desc(n_obs))<=3)%>%
+    arrange(desc(n_obs))
 ```
-
 ```{r}
-bdp_plot=rbind(b_plot,d_plot,p_plot)
-
+table=rbind(b_plot,p_plot,d_plot)%>%
+    knitr::kable(digits=1)
+table
 ```
+
+The three most popular items in baking ingrediants included Light Brown Sugar, Pure Baking Sugar, and Cane Sugar. 
+The three most popular items in packaged vegetables fruits included Organic Baby Spinach, Organic Raspberries, and Organic Blueberries
+The three most popular items in dog food care included Snack Sticks Chicken& Rice Recipe Dog Treats,Organix Chicken & Brown Rice Recipe, and Small Dog Biscuits.
+
 
 Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
 ```{r}
+instacart%>%
+  filter(
+    product_name=="Pink Lady Apples"|
+    product_name=="Coffee Ice Cream"
+  )%>%
+  group_by(order_dow)%>%
+  summarise(
+    mean_hour=mean(order_hour_of_day)
+  )
 
 ```
+
+## Problem 2
+Accelerometers have become an appealing alternative to self-report techniques for studying physical activity in observational studies and clinical trials, largely because of their relative objectivity. During observation periods, the devices measure “activity counts” in a short period; one-minute intervals are common. Because accelerometers can be worn comfortably and unobtrusively, they produce around-the-clock observations. 
+This problem uses five weeks of accelerometer data collected on a 63 year-old male with BMI 25, who was admitted to the Advanced Cardiac Care Center of Columbia University Medical Center and diagnosed with congestive heart failure (CHF). 
+
+### (a)
+Load, tidy, and otherwise wrangle the data. Your final dataset should include all originally observed variables and values; have useful variable names; include a weekday vs weekend variable; and encode data with reasonable variable classes. Describe the resulting dataset (e.g. what variables exist, how many observations, etc).
+
+```{r}
+activity_df=
+  read_csv("./data/accel_data.csv") %>%
+  janitor::clean_names()%>%
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to="activity_minute",
+    values_to="activity_counts",
+    names_prefix="activity_"
+    )%>%
+  mutate(
+    day_type = ifelse(day %in% c("Saturday","Sunday"),"weekend","weekday"),
+    activity_minute=as.integer(activity_minute)
+  )%>%
+  select(week,day_id,day,day_type,everything())
+```
+In this observational study in clinical trials, the Dataset contain `r ncol(activity_df)` variables, included week, day_id, day, day_type, activity minute, and activity counts in each one-minute interval measured by deviced.In this spreadsheet, the activity counts for each minute of a 24-hour day started at midnight and collected `r nrow(activity_df)` observations in total.  
+
+
+
+Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate across minutes to create a total activity variable for each day, and create a table showing these totals. Are any trends apparent?
+```{r}
+daily_activity_df=
+  activity_df%>%
+  group_by(day_id)%>%
+  summarise(total_activity_counts=sum(activity_counts))%>%
+  knitr::kable(digits=1)
+  daily_activity_df
+```
+The table can't clearly show the total activity counts in each day. 
+
+Accelerometer data allows the inspection activity over the course of the day. Make a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week. Describe in words any patterns or conclusions you can make based on this graph.
+
+```{r}
+graph_activity_df=
+  activity_df%>%
+  ggplot(aes(x=activity_minute,y=activity_counts))+
+  geom_line(aes(color=day),alpha=0.8)+
+  labs(
+    title="24-hour activity time courses for each day within a week",
+    x="Time",
+    y="Activity Counts"
+  )+
+  scale_x_continuous(
+    breaks=c(60,120,180,240,300,360,420,480,540,600,660,720,780,840,900,960,1020,1080,1140,1200,1260,1320,1380,1440),
+    labels=c("1:00 AM","2:00 AM","3:00 AM","4:00 AM","5:00 AM","6:00 AM","7:00 AM","8:00 AM","9:00 AM","10:00 AM","11:00 AM","12:00 AM","1:00 PM","2:00 PM","3:00 PM","4:00 PM","5:00 PM","6:00 PM","7:00 PM","8:00 PM","9:00 PM","10:00 PM","11:00 PM","00:00 AM")
+  )+
+  theme(axis.text.x=element_text(angle = 90,vjust=0.5,hjust=1,size=3))
+graph_activity_df
+```
+Based on the single-panel plot that shows the 24-hour activity time courses, we can see that the activity counts is generally higher from 7:30 PM to 10:00PM, especially for friday, and 9:00AM to 12:00AM for most day in a week. The activity counts is generally lower from 0:00AM to 5:00AM. 
+
+
+## Problem 3
+```{r}
+library(p8105.datasets)
+data("ny_noaa")
+```
+```{r}
+
+tidy_ny_noaa=
+  ny_noaa%>%
+  separate(date, sep="-",into=c("year","month","day"))
+tidy_ny_noaa
+```
+Because the unit of prcp (Precipitation) is tenths of mm(mm/10).
+the unit of maximum temperature and minimum temperature are tenths of degree C. 
+
+```{r}
+tidy_ny_noaa_unit=
+  tidy_ny_noaa%>%
+  mutate(prcp=as.integer(prcp)/10,
+         tmax=as.integer(tmax)/10,
+         tmin=as.integer(tmin)/10)
+```
+
+The most common observed snowfall:
+
+```{r}
+most_common_snow=
+  tidy_ny_noaa_unit%>%
+  group_by(snow)%>%
+  summarise(number_snow=n())%>%
+  filter(min_rank(desc(number_snow))<=10)%>%
+  arrange(desc(number_snow))
+most_common_snow
+```
+The 10 most commonly observed snow depth is 0mm, with 2008508 observations.
+
+
+Make a two-panel plot showing the average max temperature in January and in July in each station across years. Is there any observable / interpretable structure? Any outliers?
+```{r}
+average_max_temp=
+  tidy_ny_noaa_unit%>%
+  filter(month%in% c("01","07"))%>%
+  group_by(year,id,month)%>%
+  summarise(average_tmax=mean(tmax,na.rm=TRUE))%>%
+  ggplot(aes(x=year,y=average_tmax,color=month))+
+  geom_boxplot()+
+  facet_grid(.~month)+
+  labs(
+    title="Average Max Temperature in Jan and July across year",
+    x="Year",
+    y="Average Max Temperature"
+  )+
+  theme(axis.text.x=element_text(angle = 90,vjust=0.5,hjust=1,size=3))
+  
+average_max_temp
+```
+The Average Max Temperature in January is around zero degree, which is much lower tha average max temperature in July. The outlier in January is generally above the average temperature. in contrast, the general outlier in July is lower than average temperature. 
+
+
+Make a two-panel plot showing (i) tmax vs tmin for the full dataset (note that a scatterplot may not be the best option); and (ii) make a plot showing the distribution of snowfall values greater than 0 and less than 100 separately by year.
+
+```{r}
+tmax_tmin=
+  tidy_ny_noaa_unit%>%
+  group_by(year)%>%
+  ggplot(aes(x=tmin,y=tmax))+
+  geom_density2d()+
+  labs(
+    title="Maximum Temperature vs Minimum Temperature",
+    x="Minimum Temperature(degrees C)",
+    y="Maximum Temperature(degree C)"
+  )
+tmax_tmin
+```
+The most Maximum Temperature and Minimum Temperature combination located in (15,25) and (-2,5)
+
+```{r}
+snowfall_year=
+  tidy_ny_noaa_unit%>%
+  filter(snow>0,snow<100)%>%
+  group_by(year)%>%
+  ggplot(aes(x=year,y=snow))+
+  geom_boxplot()+ 
+  stat_summary(fun = "median", color = "blue")+
+  labs(
+    title="Snowfall in each Year",
+    x="Year",
+    y="Snowfall(mm)"
+  )+
+    theme(axis.text.x=element_text(angle = 90,vjust=0.5,hjust=1,size=5))
+  
+snowfall_year
+  
+```
+The median of snowfall(mm) is generally same from 1981 to 2010,but the snowfall in 2006,2010,1998,2003,and 2007 is smaller than other years. 
 
